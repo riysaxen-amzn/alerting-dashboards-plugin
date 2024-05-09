@@ -34,9 +34,11 @@ import { DESTINATION_TYPE } from '../../utils/constants';
 import { backendErrorNotification } from '../../../../utils/helpers';
 import NotificationsInfoCallOut from '../../components/NotificationsInfoCallOut';
 import FullPageNotificationsInfoCallOut from '../../components/FullPageNotificationsInfoCallOut';
-import { createQueryObject } from '../../../utils/helpers';
+import { createQueryObjectFromContext } from '../../../utils/helpers';
+import { DataContext } from '../../../../../public/utils/DataContext';
 
 class DestinationsList extends React.Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
 
@@ -64,8 +66,6 @@ class DestinationsList extends React.Component {
       showManageEmailGroups: false,
       hasNotificationPlugin: false,
     };
-
-    this.dataSourceQuery = createQueryObject();
 
     this.columns = [
       ...staticColumns,
@@ -100,6 +100,8 @@ class DestinationsList extends React.Component {
   }
 
   async componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     this.getPlugins();
     const { httpClient } = this.props;
     const allowList = await getAllowList(httpClient);

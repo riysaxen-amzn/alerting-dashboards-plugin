@@ -29,9 +29,11 @@ import * as HistoryConstants from './utils/constants';
 import { INDEX } from '../../../../../utils/constants';
 import { backendErrorNotification } from '../../../../utils/helpers';
 import { MONITOR_TYPE } from '../../../../utils/constants';
-import { createQueryObject } from '../../../utils/helpers';
+import { createQueryObjectFromContext } from '../../../utils/helpers';
+import { DataContext } from '../../../../../public/utils/DataContext';
 
 class MonitorHistory extends PureComponent {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
 
@@ -52,11 +54,11 @@ class MonitorHistory extends PureComponent {
         endTime: this.initialEndTime,
       },
     };
-
-    this.dataSourceQuery = createQueryObject();
   }
 
   async componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     const { triggers } = this.props;
     if (triggers.length > 0) {
       await this.getPOIData();

@@ -13,7 +13,12 @@ import { validateIndex, hasError, isInvalid } from '../../../../utils/validate';
 import { canAppendWildcard, createReasonableWait, getMatchedOptions } from './utils/helpers';
 import { MONITOR_TYPE } from '../../../../utils/constants';
 import CrossClusterConfiguration from '../../components/CrossClusterConfigurations/containers';
-import { createQueryObject, isDataSourceChanged } from '../../../../../public/pages/utils/helpers';
+import {
+  createQueryObjectFromContext,
+  createQueryObject,
+  isDataSourceChanged,
+} from '../../../../../public/pages/utils/helpers';
+import DataContext from '../../../../utils/DataContext';
 
 const CustomOption = ({ option, searchValue, contentClassName }) => {
   const { health, label, index } = option;
@@ -40,6 +45,7 @@ const propTypes = {
 };
 
 class MonitorIndex extends React.Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
     this.lastQuery = null;
@@ -64,6 +70,8 @@ class MonitorIndex extends React.Component {
 
   componentDidMount() {
     // Simulate initial load.
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     this.onSearchChange('');
   }
 
@@ -118,10 +126,9 @@ class MonitorIndex extends React.Component {
       return [];
     }
     try {
-      const dataSourceQuery = createQueryObject();
       const response = await this.props.httpClient.post('../api/alerting/_indices', {
         body: JSON.stringify({ index }),
-        ...(dataSourceQuery ? { query: dataSourceQuery } : {}),
+        ...(this.dataSourceQuery ? { query: this.dataSourceQuery } : {}),
       });
       if (response.ok) {
         const indices = response.resp.map(({ health, index, status }) => ({
@@ -150,10 +157,9 @@ class MonitorIndex extends React.Component {
     }
 
     try {
-      const dataSourceQuery = createQueryObject();
       const response = await this.props.httpClient.post('../api/alerting/_aliases', {
         body: JSON.stringify({ alias }),
-        ...(dataSourceQuery ? { query: dataSourceQuery } : {}),
+        ...(this.dataSourceQuery ? { query: this.dataSourceQuery } : {}),
       });
       if (response.ok) {
         const indices = response.resp.map(({ alias, index }) => ({ label: alias, index }));

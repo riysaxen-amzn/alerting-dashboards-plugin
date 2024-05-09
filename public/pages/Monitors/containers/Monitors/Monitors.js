@@ -20,16 +20,18 @@ import { backendErrorNotification, deleteMonitor } from '../../../../utils/helpe
 import { displayAcknowledgedAlertsToast } from '../../../Dashboard/utils/helpers';
 import { DeleteMonitorModal } from '../../../../components/DeleteModal/DeleteMonitorModal';
 import {
-  createQueryObject,
+  createQueryObjectFromContext,
   handleDataSourceChange,
   isDataSourceChanged,
 } from '../../../utils/helpers';
+import { DataContext } from '../../../../../public/utils/DataContext';
 
 const MAX_MONITOR_COUNT = 1000;
 
 // TODO: Abstract out a Table component to be used in both Dashboard and Monitors
 
 export default class Monitors extends Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
     const { from, size, search, sortField, sortDirection, state } = getURLQueryParams(
@@ -52,7 +54,6 @@ export default class Monitors extends Component {
       loadingMonitors: true,
       monitorItemsToDelete: undefined,
     };
-    this.dataSourceQuery = createQueryObject();
     this.getMonitors = _.debounce(this.getMonitors.bind(this), 500, { leading: true });
     this.onTableChange = this.onTableChange.bind(this);
     this.onMonitorStateChange = this.onMonitorStateChange.bind(this);
@@ -110,6 +111,8 @@ export default class Monitors extends Component {
   }
 
   componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     const { page, size, search, sortField, sortDirection, monitorState } = this.state;
     this.getMonitors(page * size, size, search, sortField, sortDirection, monitorState);
   }

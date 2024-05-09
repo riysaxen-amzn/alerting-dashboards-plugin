@@ -37,6 +37,7 @@ import { getPathsPerDataType } from '../../../../CreateMonitor/containers/Define
 import { MONITOR_TYPE } from '../../../../../utils/constants';
 import { buildClusterMetricsRequest } from '../../../../CreateMonitor/components/ClusterMetricsMonitor/utils/clusterMetricsMonitorHelpers';
 import { getTimeZone } from '../../../utils/helper';
+import { DataContext } from '../../../../../../public/utils/helpers';
 
 export const DEFAULT_CLOSED_STATES = {
   WHEN: false,
@@ -48,6 +49,7 @@ export const DEFAULT_CLOSED_STATES = {
 };
 
 export default class CreateTrigger extends Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
 
@@ -67,6 +69,8 @@ export default class CreateTrigger extends Component {
   }
 
   componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     this.onRunExecute();
     this.onQueryMappings();
   }
@@ -263,10 +267,9 @@ export default class CreateTrigger extends Component {
     }
 
     try {
-      const dataSourceQuery = createQueryObject();
       const response = await this.props.httpClient.post('../api/alerting/_mappings', {
         body: JSON.stringify({ index }),
-        ...(dataSourceQuery ? { query: dataSourceQuery } : {}),
+        ...(this.dataSourceQuery ? { query: this.dataSourceQuery } : {}),
       });
       if (response.ok) {
         return response.resp;

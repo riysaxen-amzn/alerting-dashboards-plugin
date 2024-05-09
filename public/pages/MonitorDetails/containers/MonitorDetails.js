@@ -48,9 +48,11 @@ import FindingsDashboard from '../../Dashboard/containers/FindingsDashboard';
 import { TABLE_TAB_IDS } from '../../Dashboard/components/FindingsDashboard/findingsUtils';
 import { DeleteMonitorModal } from '../../../components/DeleteModal/DeleteMonitorModal';
 import { getLocalClusterName } from '../../CreateMonitor/components/CrossClusterConfigurations/utils/helpers';
-import { createQueryObject } from '../../utils/helpers';
+import DataContext from '../../../../public/utils/DataContext';
+import { createQueryObjectFromContext } from '../../utils/helpers';
 
 export default class MonitorDetails extends Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
     this.state = {
@@ -76,7 +78,6 @@ export default class MonitorDetails extends Component {
       showDeleteModal: false,
       localClusterName: undefined,
     };
-    this.dataSourceQuery = createQueryObject();
   }
 
   isWorkflow = () => {
@@ -92,6 +93,8 @@ export default class MonitorDetails extends Component {
   };
 
   componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     this.getMonitor(this.props.match.params.monitorId);
     this.getLocalClusterName();
   }

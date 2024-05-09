@@ -10,7 +10,6 @@ import { EuiTab, EuiTabs } from '@elastic/eui';
 import Dashboard from '../Dashboard/containers/Dashboard';
 import Monitors from '../Monitors/containers/Monitors';
 import DestinationsList from '../Destinations/containers/DestinationsList';
-import { getDataSource, setDataSource } from '../../services';
 
 const getSelectedTabId = (pathname) => {
   if (pathname.includes('monitors')) return 'monitors';

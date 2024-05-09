@@ -41,9 +41,11 @@ import AcknowledgeAlertsModal from '../components/AcknowledgeAlertsModal';
 import { getAlertsFindingColumn } from '../components/FindingsDashboard/findingsUtils';
 import { ChainedAlertDetailsFlyout } from '../components/ChainedAlertDetailsFlyout/ChainedAlertDetailsFlyout';
 import { CLUSTER_METRICS_CROSS_CLUSTER_ALERT_TABLE_COLUMN } from '../../CreateMonitor/components/ClusterMetricsMonitor/utils/clusterMetricsMonitorConstants';
-import { createQueryObject } from '../../utils/helpers';
+import { createQueryObjectFromContext } from '../../utils/helpers';
+import { DataContext } from '../../../../public/utils/DataContext';
 
 export default class Dashboard extends Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
 
@@ -52,7 +54,6 @@ export default class Dashboard extends Component {
     const { alertState, from, search, severityLevel, size, sortDirection, sortField } =
       getURLQueryParams(location);
 
-    this.dataSourceQuery = createQueryObject();
     this.state = {
       alerts: [],
       alertsByTriggers: [],
@@ -81,6 +82,8 @@ export default class Dashboard extends Component {
   };
 
   componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     const { alertState, page, search, severityLevel, size, sortDirection, sortField, monitorIds } =
       this.state;
     this.getAlerts(

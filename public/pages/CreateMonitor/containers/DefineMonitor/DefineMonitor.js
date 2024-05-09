@@ -39,8 +39,9 @@ import ConfigureDocumentLevelQueries from '../../components/DocumentLevelMonitor
 import FindingsDashboard from '../../../Dashboard/containers/FindingsDashboard';
 import { validDocLevelGraphQueries } from '../../components/DocumentLevelMonitorQueries/utils/helpers';
 import { validateWhereFilters } from '../../components/MonitorExpressions/expressions/utils/whereHelpers';
-import { createQueryObject } from '../../../../../public/pages/utils/helpers';
+import { createQueryObjectFromContext } from '../../../../../public/pages/utils/helpers';
 import { CROSS_CLUSTER_MONITORING_ENABLED_SETTING } from '../../components/CrossClusterConfigurations/utils/helpers';
+import DataContext from '../../../../utils/DataContext';
 
 function renderEmptyMessage(message) {
   return (
@@ -65,6 +66,7 @@ const defaultProps = {
 };
 
 class DefineMonitor extends Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
     this.state = {
@@ -78,7 +80,7 @@ class DefineMonitor extends Component {
       remoteMonitoringEnabled: false,
       canCallGetRemoteIndexes: false,
     };
-    this.dataSourceQuery = createQueryObject();
+
     this.renderGraph = this.renderGraph.bind(this);
     this.onRunQuery = this.onRunQuery.bind(this);
     this.resetResponse = this.resetResponse.bind(this);
@@ -95,6 +97,8 @@ class DefineMonitor extends Component {
   }
 
   componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     this.getPlugins();
     const { searchType, index, timeField } = this.props.values;
     const isGraph = searchType === SEARCH_TYPE.GRAPH;
@@ -477,7 +481,6 @@ class DefineMonitor extends Component {
 
     try {
       // If any index contain ":", it indicates at least 1 remote index is configured.
-      // const query = createQueryObject();
       const hasRemoteClusters = index.some((indexName) => indexName.includes(':'));
       const response = hasRemoteClusters
         ? await this.props.httpClient.get('../api/alerting/remote/indexes', {

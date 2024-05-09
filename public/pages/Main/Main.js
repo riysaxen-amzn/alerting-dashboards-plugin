@@ -12,15 +12,15 @@ import MonitorDetails from '../MonitorDetails/containers/MonitorDetails';
 import CreateDestination from '../Destinations/containers/CreateDestination';
 import Flyout from '../../components/Flyout';
 import { APP_PATH } from '../../utils/constants';
-import { ServicesConsumer, getDataSource } from '../../services';
+import { ServicesConsumer } from '../../services';
 import { getBreadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import {
   getDataSourceManagementPlugin,
   getNotifications,
   getSavedObjectsClient,
   setDataSource,
-  getDataSourceEnabled,
 } from '../../../public/services';
+import DataContext, { DataContextProvider } from '../../../public/utils/DataContext';
 
 class Main extends Component {
   static contextType = CoreContext;
@@ -119,15 +119,15 @@ class Main extends Component {
             <ServicesConsumer>
               {(services) =>
                 services && (
-                  <div style={{ padding: '15px 0px' }}>
-                    <Flyout
-                      flyout={flyout}
-                      onClose={() => {
-                        this.setFlyout(null);
-                      }}
-                    />
-                    {dataSourceEnabled && (
-                      <>
+                  <DataContext.Provider value={{ dataSourceId: this.state.selectedDataSourceId }}>
+                    <div style={{ padding: '15px 0px' }}>
+                      <Flyout
+                        flyout={flyout}
+                        onClose={() => {
+                          this.setFlyout(null);
+                        }}
+                      />
+                      {dataSourceEnabled && (
                         <Switch>
                           <Route
                             path={['/monitors/:monitorId', '/destinations/:destinationId']}
@@ -143,76 +143,76 @@ class Main extends Component {
                             render={() => this.renderDataSourceComponent('DataSourceSelectable')}
                           />
                         </Switch>
-                      </>
-                    )}
-                    <Switch>
-                      <Route
-                        path={APP_PATH.CREATE_MONITOR}
-                        render={(props) => (
-                          <CreateMonitor
-                            httpClient={core.http}
-                            setFlyout={this.setFlyout}
-                            notifications={core.notifications}
-                            isDarkMode={core.isDarkMode}
-                            notificationService={services.notificationService}
-                            {...props}
-                            landingDataSourceId={this.state.selectedDataSourceId}
-                          />
-                        )}
-                      />
-                      <Route
-                        path={APP_PATH.CREATE_DESTINATION}
-                        render={(props) => (
-                          <CreateDestination
-                            httpClient={core.http}
-                            setFlyout={this.setFlyout}
-                            notifications={core.notifications}
-                            {...props}
-                          />
-                        )}
-                      />
-                      <Route
-                        path="/destinations/:destinationId"
-                        render={(props) => (
-                          <CreateDestination
-                            httpClient={core.http}
-                            setFlyout={this.setFlyout}
-                            notifications={core.notifications}
-                            setActionMenu={setActionMenu}
-                            {...props}
-                            edit
-                          />
-                        )}
-                      />
-                      <Route
-                        path="/monitors/:monitorId"
-                        render={(props) => (
-                          <MonitorDetails
-                            httpClient={core.http}
-                            setFlyout={this.setFlyout}
-                            notifications={core.notifications}
-                            isDarkMode={core.isDarkMode}
-                            notificationService={services.notificationService}
-                            {...props}
-                            landingDataSourceId={this.state.selectedDataSourceId}
-                          />
-                        )}
-                      />
-                      {!this.state.dataSourceLoading && (
+                      )}
+                      <Switch>
                         <Route
+                          path={APP_PATH.CREATE_MONITOR}
                           render={(props) => (
-                            <Home
+                            <CreateMonitor
                               httpClient={core.http}
-                              {...props}
                               setFlyout={this.setFlyout}
                               notifications={core.notifications}
+                              isDarkMode={core.isDarkMode}
+                              notificationService={services.notificationService}
+                              {...props}
                               landingDataSourceId={this.state.selectedDataSourceId}
                             />
                           )}
                         />
-                      )}
-                    </Switch>
-                  </div>
+                        <Route
+                          path={APP_PATH.CREATE_DESTINATION}
+                          render={(props) => (
+                            <CreateDestination
+                              httpClient={core.http}
+                              setFlyout={this.setFlyout}
+                              notifications={core.notifications}
+                              {...props}
+                            />
+                          )}
+                        />
+                        <Route
+                          path="/destinations/:destinationId"
+                          render={(props) => (
+                            <CreateDestination
+                              httpClient={core.http}
+                              setFlyout={this.setFlyout}
+                              notifications={core.notifications}
+                              setActionMenu={setActionMenu}
+                              {...props}
+                              edit
+                            />
+                          )}
+                        />
+                        <Route
+                          path="/monitors/:monitorId"
+                          render={(props) => (
+                            <MonitorDetails
+                              httpClient={core.http}
+                              setFlyout={this.setFlyout}
+                              notifications={core.notifications}
+                              isDarkMode={core.isDarkMode}
+                              notificationService={services.notificationService}
+                              {...props}
+                              landingDataSourceId={this.state.selectedDataSourceId}
+                            />
+                          )}
+                        />
+                        {!this.state.dataSourceLoading && (
+                          <Route
+                            render={(props) => (
+                              <Home
+                                httpClient={core.http}
+                                {...props}
+                                setFlyout={this.setFlyout}
+                                notifications={core.notifications}
+                                landingDataSourceId={this.state.selectedDataSourceId}
+                              />
+                            )}
+                          />
+                        )}
+                      </Switch>
+                    </div>
+                  </DataContext.Provider>
                 )
               }
             </ServicesConsumer>

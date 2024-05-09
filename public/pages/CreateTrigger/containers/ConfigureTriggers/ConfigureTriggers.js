@@ -33,12 +33,13 @@ import { FORMIK_INITIAL_VALUES } from '../../../CreateMonitor/containers/CreateM
 import { getDefaultScript } from '../../utils/helper';
 import DefineCompositeLevelTrigger from '../DefineCompositeLevelTrigger';
 import EnhancedAccordion from '../../../../components/FeatureAnywhereContextMenu/EnhancedAccordion';
-import { createQueryObject } from '../../../../../public/pages/utils/helpers';
+import { createQueryObjectFromContext } from '../../../../../public/pages/utils/helpers';
+import { DataContext } from '../../../../../public/utils/DataContext';
 
 class ConfigureTriggers extends React.Component {
+  static contextType = DataContext;
   constructor(props) {
     super(props);
-
     const firstTriggerId = _.get(props.triggerValues, 'triggerDefinitions[0].id');
     const startTriggerIndex = 0;
     const accordionsOpen = firstTriggerId ? { [startTriggerIndex]: true } : {};
@@ -64,6 +65,8 @@ class ConfigureTriggers extends React.Component {
   }
 
   componentDidMount() {
+    const { dataSourceId } = this.context;
+    this.dataSourceQuery = createQueryObjectFromContext(dataSourceId);
     this.monitorSetupByType();
   }
 
@@ -198,10 +201,9 @@ class ConfigureTriggers extends React.Component {
     }
 
     try {
-      const dataSourceQuery = createQueryObject();
       const response = await this.props.httpClient.post('../api/alerting/_mappings', {
         body: JSON.stringify({ index }),
-        ...(dataSourceQuery ? { query: dataSourceQuery } : {}),
+        ...(this.dataSourceQuery ? { query: this.dataSourceQuery } : {}),
       });
       if (response.ok) {
         return response.resp;
