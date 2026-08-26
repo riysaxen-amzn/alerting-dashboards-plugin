@@ -19,7 +19,11 @@ const ALERTS_BASE_PATH = `${PPL_MONITOR_BASE_API}/alerts`;
  */
 const toV1MonitorBody = (body) => {
   const pplMon = body?.ppl_monitor || body;
-  const query = pplMon.query || '';
+  // Accept both the flattened frontend shape (query at top level) and the
+  // raw v1 shape (query nested in inputs[0].ppl_input.query). Callers that
+  // round-trip a v1-format monitor (e.g. the monitor details page
+  // enable/disable toggle) send the latter.
+  const query = pplMon.query || pplMon.inputs?.[0]?.ppl_input?.query || '';
   const rawTriggers = Array.isArray(pplMon.triggers) ? pplMon.triggers : [];
   const triggers = rawTriggers.map((t) => {
     if (t.ppl_trigger) return t;
@@ -616,8 +620,12 @@ export default class PplAlertingMonitorService extends MDSEnabledClientService {
 
       // Guard against silent data loss: toV1MonitorBody defaults a missing
       // query to '', so an update body without a query would silently wipe
-      // the monitor's PPL query. Reject it instead.
-      if (!cleanMonitor.query || !String(cleanMonitor.query).trim()) {
+      // the monitor's PPL query. Accept the query from either the flattened
+      // shape (top-level query) or the raw v1 shape (inputs[0].ppl_input.query,
+      // sent by callers that round-trip a v1-format monitor such as the
+      // details-page enable/disable toggle); reject only if neither is present.
+      const bodyQuery = cleanMonitor.query || cleanMonitor.inputs?.[0]?.ppl_input?.query;
+      if (!bodyQuery || !String(bodyQuery).trim()) {
         return res.ok({
           body: {
             ok: false,

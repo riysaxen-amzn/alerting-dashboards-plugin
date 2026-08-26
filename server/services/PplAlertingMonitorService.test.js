@@ -102,6 +102,61 @@ describe('PplAlertingMonitorService.updateMonitor query guard', () => {
     expect(callArgs.body.inputs[0].ppl_input.query).toContain('source = logs-*');
     expect(callArgs.body.triggers[0].ppl_trigger).toBeDefined();
   });
+
+  test('accepts a raw v1-shape body whose query is nested in inputs[0].ppl_input (details-page enable/disable round-trip)', async () => {
+    const client = jest.fn().mockResolvedValue({ _id: 'mon-1' });
+    const service = buildService(client);
+    const res = buildRes();
+    // Shape sent by the monitor details page enable/disable toggle: the raw
+    // v1 monitor round-tripped verbatim -- query nested, nothing at top level.
+    const v1ShapeBody = {
+      ppl_monitor: {
+        type: 'monitor',
+        schema_version: 8,
+        name: 'ppl-monitor-test',
+        enabled: false,
+        schedule: { period: { interval: 1, unit: 'MINUTES' } },
+        inputs: [
+          {
+            ppl_input: {
+              query: "source = logs-otel* | where severityText = 'ERROR'",
+              query_language: 'ppl',
+            },
+          },
+        ],
+        triggers: [
+          {
+            ppl_trigger: {
+              id: 'trigger-id-1',
+              name: 'results-trigger',
+              severity: '1',
+              actions: [],
+              type: 'number_of_results',
+              num_results_condition: '>',
+              num_results_value: 0,
+            },
+          },
+        ],
+      },
+    };
+
+    const result = await service.updateMonitor(
+      {},
+      { params: { id: 'mon-1' }, query: {}, body: v1ShapeBody },
+      res
+    );
+
+    // The guard must not reject it, and the query must survive the translation
+    // instead of being wiped to ''.
+    expect(result.body.ok).toBe(true);
+    expect(client).toHaveBeenCalledTimes(1);
+    const [, callArgs] = client.mock.calls[0];
+    expect(callArgs.body.inputs[0].ppl_input.query).toBe(
+      "source = logs-otel* | where severityText = 'ERROR'"
+    );
+    expect(callArgs.body.enabled).toBe(false);
+    expect(callArgs.body.triggers[0].ppl_trigger).toBeDefined();
+  });
 });
 
 describe('PplAlertingMonitorService.executeMonitor v1 translation', () => {
