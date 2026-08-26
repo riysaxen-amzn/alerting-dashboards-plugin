@@ -112,6 +112,7 @@ describe('addTimeFilterToQuery', () => {
     // Simulates: edit a monitor saved with lookback ON, uncheck the lookback
     // window, save. The persisted query must no longer carry the old filter.
     const storedQuery = addTimeFilterToQuery('source=logs | stats count()', 60, '@timestamp');
+    // buildPPLMonitorFromFormik returns the wrapped shape { ppl_monitor: {...} }.
     const monitor = buildPPLMonitorFromFormik({
       name: 'm',
       pplQuery: storedQuery,
@@ -121,9 +122,9 @@ describe('addTimeFilterToQuery', () => {
       period: { interval: 1, unit: 'MINUTES' },
       triggerDefinitions: [],
     });
-    expect(monitor.query).not.toContain('DATE_SUB');
-    expect(monitor.query).toContain('source=logs');
-    expect(monitor.query).toContain('| stats count()');
+    expect(monitor.ppl_monitor.query).not.toContain('DATE_SUB');
+    expect(monitor.ppl_monitor.query).toContain('source=logs');
+    expect(monitor.ppl_monitor.query).toContain('| stats count()');
   });
 
   test('replaces a legacy absolute TIMESTAMP filter persisted by older saves', () => {
