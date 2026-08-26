@@ -80,7 +80,7 @@ describe('PplAlertingMonitorService.updateMonitor query guard', () => {
     expect(result.body.ok).toBe(false);
   });
 
-  test('forwards a valid update translated to the v1 engine format', async () => {
+  test('forwards a valid update translated to the engine format', async () => {
     const client = jest.fn().mockResolvedValue({ _id: 'mon-1' });
     const service = buildService(client);
     const res = buildRes();
@@ -96,20 +96,20 @@ describe('PplAlertingMonitorService.updateMonitor query guard', () => {
     const [, callArgs] = client.mock.calls[0];
     expect(callArgs.method).toBe('PUT');
     expect(callArgs.path).toContain('/_plugins/_alerting/monitors/mon-1');
-    // v1 shape: top-level name, ppl_input inputs, ppl_trigger-wrapped triggers
+    // engine shape: top-level name, ppl_input inputs, ppl_trigger-wrapped triggers
     expect(callArgs.body.name).toBe('my monitor');
     expect(callArgs.body.monitor_type).toBe('ppl_monitor');
     expect(callArgs.body.inputs[0].ppl_input.query).toContain('source = logs-*');
     expect(callArgs.body.triggers[0].ppl_trigger).toBeDefined();
   });
 
-  test('accepts a raw v1-shape body whose query is nested in inputs[0].ppl_input (details-page enable/disable round-trip)', async () => {
+  test('accepts a raw engine-shape body whose query is nested in inputs[0].ppl_input (details-page enable/disable round-trip)', async () => {
     const client = jest.fn().mockResolvedValue({ _id: 'mon-1' });
     const service = buildService(client);
     const res = buildRes();
     // Shape sent by the monitor details page enable/disable toggle: the raw
-    // v1 monitor round-tripped verbatim -- query nested, nothing at top level.
-    const v1ShapeBody = {
+    // engine-format monitor round-tripped verbatim -- query nested, nothing at top level.
+    const engineShapeBody = {
       ppl_monitor: {
         type: 'monitor',
         schema_version: 8,
@@ -142,7 +142,7 @@ describe('PplAlertingMonitorService.updateMonitor query guard', () => {
 
     const result = await service.updateMonitor(
       {},
-      { params: { id: 'mon-1' }, query: {}, body: v1ShapeBody },
+      { params: { id: 'mon-1' }, query: {}, body: engineShapeBody },
       res
     );
 
@@ -157,10 +157,60 @@ describe('PplAlertingMonitorService.updateMonitor query guard', () => {
     expect(callArgs.body.enabled).toBe(false);
     expect(callArgs.body.triggers[0].ppl_trigger).toBeDefined();
   });
+
+  test('rejects an engine-shape body whose nested query is empty', async () => {
+    const client = jest.fn();
+    const service = buildService(client);
+    const res = buildRes();
+    const emptyNestedQueryBody = {
+      ppl_monitor: {
+        name: 'ppl-monitor-test',
+        enabled: true,
+        schedule: { period: { interval: 1, unit: 'MINUTES' } },
+        inputs: [{ ppl_input: { query: '', query_language: 'ppl' } }],
+        triggers: [],
+      },
+    };
+
+    const result = await service.updateMonitor(
+      {},
+      { params: { id: 'mon-1' }, query: {}, body: emptyNestedQueryBody },
+      res
+    );
+
+    expect(client).not.toHaveBeenCalled();
+    expect(result.body.ok).toBe(false);
+    expect(result.body.resp).toContain('missing the PPL query');
+  });
+
+  test('rejects an engine-shape body whose ppl_input is empty', async () => {
+    const client = jest.fn();
+    const service = buildService(client);
+    const res = buildRes();
+    const emptyInputBody = {
+      ppl_monitor: {
+        name: 'ppl-monitor-test',
+        enabled: true,
+        schedule: { period: { interval: 1, unit: 'MINUTES' } },
+        inputs: [{ ppl_input: {} }],
+        triggers: [],
+      },
+    };
+
+    const result = await service.updateMonitor(
+      {},
+      { params: { id: 'mon-1' }, query: {}, body: emptyInputBody },
+      res
+    );
+
+    expect(client).not.toHaveBeenCalled();
+    expect(result.body.ok).toBe(false);
+    expect(result.body.resp).toContain('missing the PPL query');
+  });
 });
 
-describe('PplAlertingMonitorService.executeMonitor v1 translation', () => {
-  test('translates the v2 ppl_monitor body to v1 before hitting the engine', async () => {
+describe('PplAlertingMonitorService.executeMonitor engine-format translation', () => {
+  test('translates the flattened ppl_monitor body to the engine format before hitting the engine', async () => {
     const client = jest.fn().mockResolvedValue({ monitor_name: 'my monitor' });
     const service = buildService(client);
     const res = buildRes();
