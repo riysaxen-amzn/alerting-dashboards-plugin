@@ -17,13 +17,25 @@ const ALERTS_BASE_PATH = `${PPL_MONITOR_BASE_API}/alerts`;
  * Transforms the frontend body format ({ ppl_monitor: { name, query, triggers, ... } })
  * into the engine's native monitor format ({ name, monitor_type, inputs, triggers, ... }).
  */
+/**
+ * Extracts the PPL query from a monitor object, accepting both the flattened
+ * frontend shape (query at top level) and the raw engine shape (query nested
+ * in inputs[0].ppl_input.query). Callers that round-trip an engine-format
+ * monitor (e.g. the monitor details page enable/disable toggle) send the
+ * latter. A blank (whitespace-only) top-level query does not short-circuit
+ * the nested fallback. Shared by toEngineMonitorBody and the update guard so
+ * the two can never drift apart.
+ */
+const extractPplQuery = (pplMon) => {
+  const topLevel = typeof pplMon?.query === 'string' ? pplMon.query : '';
+  if (topLevel.trim()) return topLevel;
+  const nested = pplMon?.inputs?.[0]?.ppl_input?.query;
+  return typeof nested === 'string' ? nested : '';
+};
+
 const toEngineMonitorBody = (body) => {
   const pplMon = body?.ppl_monitor || body;
-  // Accept both the flattened frontend shape (query at top level) and the
-  // raw engine shape (query nested in inputs[0].ppl_input.query). Callers that
-  // round-trip an engine-format monitor (e.g. the monitor details page
-  // enable/disable toggle) send the latter.
-  const query = pplMon.query || pplMon.inputs?.[0]?.ppl_input?.query || '';
+  const query = extractPplQuery(pplMon);
   const rawTriggers = Array.isArray(pplMon.triggers) ? pplMon.triggers : [];
   const triggers = rawTriggers.map((t) => {
     if (t.ppl_trigger) return t;
@@ -613,9 +625,17 @@ export default class PplAlertingMonitorService extends MDSEnabledClientService {
       } = pplMon;
 
       if (Array.isArray(cleanMonitor.triggers)) {
-        cleanMonitor.triggers = cleanMonitor.triggers.map(
-          ({ id: triggerId, last_triggered_time, last_execution_time, ...trigger }) => trigger
-        );
+        // Strip stale ids/run timestamps from both trigger shapes: unwrapped
+        // (flattened frontend) and ppl_trigger-wrapped (raw engine shape).
+        cleanMonitor.triggers = cleanMonitor.triggers.map((t) => {
+          const {
+            id: triggerId,
+            last_triggered_time,
+            last_execution_time,
+            ...trigger
+          } = t?.ppl_trigger || t;
+          return t?.ppl_trigger ? { ppl_trigger: trigger } : trigger;
+        });
       }
 
       // Guard against silent data loss: toEngineMonitorBody defaults a missing
@@ -624,8 +644,8 @@ export default class PplAlertingMonitorService extends MDSEnabledClientService {
       // shape (top-level query) or the raw engine shape (inputs[0].ppl_input.query,
       // sent by callers that round-trip an engine-format monitor such as the
       // details-page enable/disable toggle); reject only if neither is present.
-      const bodyQuery = cleanMonitor.query || cleanMonitor.inputs?.[0]?.ppl_input?.query;
-      if (!bodyQuery || !String(bodyQuery).trim()) {
+      const bodyQuery = extractPplQuery(cleanMonitor);
+      if (!bodyQuery.trim()) {
         return res.ok({
           body: {
             ok: false,

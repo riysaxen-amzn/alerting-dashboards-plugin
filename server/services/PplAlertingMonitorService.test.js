@@ -156,6 +156,40 @@ describe('PplAlertingMonitorService.updateMonitor query guard', () => {
     );
     expect(callArgs.body.enabled).toBe(false);
     expect(callArgs.body.triggers[0].ppl_trigger).toBeDefined();
+    // Stale trigger metadata must be stripped from the wrapped shape too,
+    // matching what the flattened path does for unwrapped triggers.
+    expect(callArgs.body.triggers[0].ppl_trigger.id).toBeUndefined();
+    expect(callArgs.body.triggers[0].ppl_trigger.last_triggered_time).toBeUndefined();
+    expect(callArgs.body.triggers[0].ppl_trigger.last_execution_time).toBeUndefined();
+    expect(callArgs.body.triggers[0].ppl_trigger.name).toBe('results-trigger');
+  });
+
+  test('falls back to the nested query when the top-level query is whitespace-only', async () => {
+    const client = jest.fn().mockResolvedValue({ _id: 'mon-1' });
+    const service = buildService(client);
+    const res = buildRes();
+    const blankTopLevelBody = {
+      ppl_monitor: {
+        name: 'ppl-monitor-test',
+        enabled: true,
+        query: '   ',
+        schedule: { period: { interval: 1, unit: 'MINUTES' } },
+        inputs: [{ ppl_input: { query: 'source = logs | stats count()', query_language: 'ppl' } }],
+        triggers: [],
+      },
+    };
+
+    const result = await service.updateMonitor(
+      {},
+      { params: { id: 'mon-1' }, query: {}, body: blankTopLevelBody },
+      res
+    );
+
+    // A blank top-level query must not short-circuit the nested fallback.
+    expect(result.body.ok).toBe(true);
+    expect(client).toHaveBeenCalledTimes(1);
+    const [, callArgs] = client.mock.calls[0];
+    expect(callArgs.body.inputs[0].ppl_input.query).toBe('source = logs | stats count()');
   });
 
   test('rejects an engine-shape body whose nested query is empty', async () => {
